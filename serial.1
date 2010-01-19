@@ -1,0 +1,18 @@
+.Dd Tue Apr 13 2004               \" DATE 
+.Dt serial 1      \" Program name and manual section number 
+.Os Darwin
+.Sh NAME                 \" Section Header - required - don't modify 
+.Nm serial
+.Nd Write out primary ethernet address, Mac serial number, hardware class, and all ethernet addresses and class names.
+.Sh SYNOPSIS             \" Section Header - required - don't modify
+.Nm
+.Sh DESCRIPTION          \" Section Header - required - don't modify
+.Nm Prints the primary hardwire ethernet address, the Apple serial
+number, and the computer's hardware class.  You can use a listing like the
+one at http://www.theapplemuseum.com to convert the hardware class to a product name.  It then
+produces a list of all the ethernet (en) interfaces on the machine, their hardware address,
+and their product class.  The primary interface (as determined by IOPrimaryInterface) is 
+adorned with a *.
+.Pp
+
+

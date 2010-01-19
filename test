@@ -1,0 +1,9 @@
+#!/bin/bash
+
+set `./serial`
+
+hw_addr=$1
+serial=$2
+class=$3
+
+echo $serial
