@@ -14,7 +14,7 @@ void getInterface(mach_port_t mach_port, UInt8 *MACAddress) {
 	// Look for IOEthernetInterface devices -- this will include AirPorts and other networks,
 	// but we want the "primary" (IOPrimaryInterface == true) one.
 	
-	CFMutableDictionaryRef matchingDict = IOServiceNameMatching(kIOEthernetInterfaceClass);
+	CFMutableDictionaryRef matchingDict = IOServiceMatching(kIOEthernetInterfaceClass);
 	if (matchingDict) {
 		
 		CFMutableDictionaryRef propertyMatchDict = CFDictionaryCreateMutable(kCFAllocatorDefault, 0,
