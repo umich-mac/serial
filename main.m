@@ -32,7 +32,7 @@ void getInterface(mach_port_t mach_port, UInt8 *MACAddress) {
 			io_object_t obj;
 			io_object_t pobj;
 			
-			while (obj = IOIteratorNext(matchingServices)) {
+            while ((obj = IOIteratorNext(matchingServices))) {
 				CFTypeRef	MACAddressAsCFData;        
 				
 				result = IORegistryEntryGetParentEntry(obj,
@@ -144,7 +144,14 @@ int main(int argc, char *argv[])
 	
 	// if we got the master port
 	if ( kernResult == KERN_SUCCESS  ) {
-		
+
+        // Shortcut -m mode
+        if (argc == 2 && strcmp(argv[1], "-m") == 0) {
+            getModelName(machPort, model);
+            printf("%s\n", model);
+            exit(0);
+        }
+
 		getSerialNumber(machPort, serial);
 		getModelName(machPort, model);
 		getInterface(machPort, macAddress);
