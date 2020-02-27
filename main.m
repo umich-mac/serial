@@ -1,136 +1,9 @@
 #include <stdio.h>
 
 #include <CoreFoundation/CoreFoundation.h>
+#import <CommonCrypto/CommonDigest.h>
 
-#include <IOKit/IOKitLib.h>
-#include <IOKit/network/IOEthernetInterface.h>
-#include <IOKit/network/IONetworkInterface.h>
-#include <IOKit/network/IOEthernetController.h>
-
-void getInterface(mach_port_t mach_port, UInt8 *MACAddress) {
-	
-	kern_return_t   result;
-	
-	// Look for IOEthernetInterface devices -- this will include AirPorts and other networks,
-	// but we want the "primary" (IOPrimaryInterface == true) one.
-	
-	CFMutableDictionaryRef matchingDict = IOServiceMatching(kIOEthernetInterfaceClass);
-	if (matchingDict) {
-		
-		CFMutableDictionaryRef propertyMatchDict = CFDictionaryCreateMutable(kCFAllocatorDefault, 0,
-																			 &kCFTypeDictionaryKeyCallBacks,
-																			 &kCFTypeDictionaryValueCallBacks);
-		
-		CFDictionarySetValue(propertyMatchDict, CFSTR(kIOPrimaryInterface), kCFBooleanTrue);
-		CFDictionarySetValue(matchingDict, CFSTR(kIOPropertyMatchKey), propertyMatchDict);
-		CFRelease(propertyMatchDict);
-		
-		io_iterator_t matchingServices;
-		result = IOServiceGetMatchingServices(kIOMasterPortDefault, matchingDict, &matchingServices);
-		
-		if (result == KERN_SUCCESS) {
-			io_object_t obj;
-			io_object_t pobj;
-			
-            while ((obj = IOIteratorNext(matchingServices))) {
-				CFTypeRef	MACAddressAsCFData;        
-				
-				result = IORegistryEntryGetParentEntry(obj,
-													   kIOServicePlane,
-													   &pobj);
-				
-				MACAddressAsCFData = IORegistryEntryCreateCFProperty(pobj,
-																	 CFSTR(kIOMACAddress),
-																	 kCFAllocatorDefault,
-																	 0);
-				if (MACAddressAsCFData) {
-					CFDataGetBytes(MACAddressAsCFData, CFRangeMake(0, kIOEthernetAddressSize), MACAddress);
-					CFRelease(MACAddressAsCFData);
-				}
-				
-				IOObjectRelease(pobj);
-				IOObjectRelease(obj);
-			}
-		}
-	}	
-}
-
-// serial must be 20 bytes
-void getSerialNumber(mach_port_t mach_port, char *serial) {
-	
-	kern_return_t   result;
-	
-	CFMutableDictionaryRef service_name = IOServiceMatching("IOPlatformExpertDevice");
-	if (service_name) {
-		io_iterator_t i;
-		
-		// retrieve the matching IOKit services
-		result = IOServiceGetMatchingServices(mach_port, service_name, &i);
-		
-		if ((result == KERN_SUCCESS) && i) {
-			io_object_t obj;
-			bool done = false;
-			
-			do {
-				obj = IOIteratorNext(i);
-				
-				if (obj) {
-					CFStringRef serialRef = (CFStringRef)IORegistryEntryCreateCFProperty(obj, CFSTR("IOPlatformSerialNumber"), kCFAllocatorDefault, 0);
-					
-					if (serialRef) {
-						CFStringGetCString(serialRef, serial, 39, kCFStringEncodingMacRoman);
-						CFRelease(serialRef);
-						
-					} else {
-						strcpy(serial, "unknown\0");
-					}
-					
-					done = true;
-				}
-				
-				IOObjectRelease(obj);
-				
-			} while (obj && !done);
-			
-			IOObjectRelease(i);
-		}
-	}
-}
-
-void getModelName(mach_port_t mach_port, char *model) {
-	
-	kern_return_t   result;
-	
-	CFMutableDictionaryRef service_name = IOServiceMatching("IOPlatformExpertDevice");
-	if (service_name) {
-		io_iterator_t i;
-		
-		// retrieve the matching IOKit services
-		result = IOServiceGetMatchingServices(mach_port, service_name, &i);
-		
-		if ((result == KERN_SUCCESS) && i) {
-			io_object_t obj;
-			bool done = false;
-			
-			do {
-				obj = IOIteratorNext(i);
-				
-				if (obj) {
-					// This is not string data.  Why?  No idea.
-					CFDataRef modelRef = (CFDataRef)IORegistryEntryCreateCFProperty(obj, CFSTR("model"), kCFAllocatorDefault, 0);
-					CFDataGetBytes(modelRef, CFRangeMake(0,128), (void *)model);
-					CFRelease(modelRef);
-					done = true;
-				}
-				
-				IOObjectRelease(obj);
-				
-			} while (obj && !done);
-			
-			IOObjectRelease(i);
-		}
-	}
-}
+#include "DeviceDetails.h"
 
 int main(int argc, char *argv[])
 {
@@ -139,11 +12,28 @@ int main(int argc, char *argv[])
     UInt8			macAddress[kIOEthernetAddressSize];
 	char			serial[40] = "";
 	char			model[128] = "";
+    char            uuid[128]  = "";
 	
 	kernResult = IOMasterPort( MACH_PORT_NULL, &machPort );
 	
 	// if we got the master port
 	if ( kernResult == KERN_SUCCESS  ) {
+
+		getSerialNumber(machPort, serial);
+		getModelName(machPort, model);
+		getInterface(machPort, macAddress);
+        getDeviceUuid(machPort, uuid);
+
+        unsigned char digest[CC_MD5_DIGEST_LENGTH];
+        CC_MD5( uuid, (int)strlen(uuid), digest ); // This is the md5 call
+
+        // https://www.hackerearth.com/practice/notes/get-the-modulo-of-a-very-large-number-that-cannot-be-stored-in-any-data-type-in-cc-1/
+        int shard = 0;
+        for (uint index = 0; index < CC_MD5_DIGEST_LENGTH; index++) {
+            uint8 value = digest[index];
+            shard = ((shard << 8) + value) % 100;
+        }
+        shard = (shard % 100) + 1; // add one, so we go 1-100 not 0-99
 
         // Shortcut -m mode
         if (argc == 2 && strcmp(argv[1], "-m") == 0) {
@@ -152,14 +42,24 @@ int main(int argc, char *argv[])
             exit(0);
         }
 
-		getSerialNumber(machPort, serial);
-		getModelName(machPort, model);
-		getInterface(machPort, macAddress);
-		
+        // Shard only
+        if (argc == 2 && strcasecmp(argv[1], "--shard") == 0) {
+            printf("%d\n", shard);
+            exit(0);
+        }
+
+        // Shard only (jamf version)
+        if (argc == 2 && strcasecmp(argv[1], "--jamf-shard") == 0) {
+            printf("<result>%d</result>\n", shard);
+            exit(0);
+        }
+
+        // Otherwise: all the numbers
 		printf("%s\n", serial);
 		printf("%s\n", model);
 		printf("%02x:%02x:%02x:%02x:%02x:%02x\n", macAddress[0], macAddress[1], macAddress[2], macAddress[3], macAddress[4], macAddress[5]);
-		
+        printf("%s\n", uuid);
+        printf("%d\n", shard);
 	}
 	
 	return 0;
