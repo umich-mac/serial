@@ -120,7 +120,8 @@ void getModelName(mach_port_t mach_port, char *model) {
                 if (obj) {
                     // This is not string data.  Why?  No idea.
                     CFDataRef modelRef = (CFDataRef)IORegistryEntryCreateCFProperty(obj, CFSTR("model"), kCFAllocatorDefault, 0);
-                    CFDataGetBytes(modelRef, CFRangeMake(0,128), (void *)model);
+                    long length = CFDataGetLength(modelRef);
+                    CFDataGetBytes(modelRef, CFRangeMake(0, MIN(128, length)), (UInt8 *)model);
                     CFRelease(modelRef);
                     done = true;
                 }
