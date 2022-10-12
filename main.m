@@ -69,8 +69,8 @@ int main(int argc, char *argv[])
         }
 		
         // UUID only
-        if (argc == 2 && strcasecmp(argv[1], "--uuid) == 0) {
-			getDeviceUuid(machPort, uuid);ial
+        if (argc == 2 && strcasecmp(argv[1], "--uuid") == 0) {
+			getDeviceUuid(machPort, uuid);
             printf("%s\n", uuid);
             exit(0);
         }
