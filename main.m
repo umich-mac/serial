@@ -30,28 +30,29 @@ int main(int argc, char *argv[])
         // https://www.hackerearth.com/practice/notes/get-the-modulo-of-a-very-large-number-that-cannot-be-stored-in-any-data-type-in-cc-1/
         int shard = 0;
         for (uint index = 0; index < CC_MD5_DIGEST_LENGTH; index++) {
-            uint8 value = digest[index];
+            uint value = digest[index];
             shard = ((shard << 8) + value) % 100;
         }
         shard = (shard % 100) + 1; // add one, so we go 1-100 not 0-99
 
         // Shortcut -s mode
-        if (argc == 2 && strcmp(argv[1], "-s") == 0) {
-            getSerialNumber(machPort, serial);
+        if (argc == 2 && ( (strcmp(argv[1], "-s") == 0) ||
+                           (strcmp(argv[1], "--serial") == 0)
+                          ) ) {
             printf("%s\n", serial);
             exit(0);
         }
 		
         // Shortcut -m mode
-        if (argc == 2 && strcmp(argv[1], "-m") == 0) {
-            getModelName(machPort, model);
+        if (argc == 2 && ( (strcmp(argv[1], "-m") == 0) ||
+                           (strcmp(argv[1], "--model") == 0)
+                         ) ) {
             printf("%s\n", model);
             exit(0);
         }
 		
         // MAC addresses here
         if (argc == 2 && strcasecmp(argv[1], "--mac") == 0) {
-			getInterface(machPort, macAddress);
             printf("%02x:%02x:%02x:%02x:%02x:%02x\n", macAddress[0], macAddress[1], macAddress[2], macAddress[3], macAddress[4], macAddress[5]);
             exit(0);
         }
@@ -70,7 +71,6 @@ int main(int argc, char *argv[])
 		
         // UUID only
         if (argc == 2 && strcasecmp(argv[1], "--uuid") == 0) {
-			getDeviceUuid(machPort, uuid);
             printf("%s\n", uuid);
             exit(0);
         }
