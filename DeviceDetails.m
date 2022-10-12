@@ -120,8 +120,7 @@ void getModelName(mach_port_t mach_port, char *model) {
                 if (obj) {
                     // This is not string data.  Why?  No idea.
                     CFDataRef modelRef = (CFDataRef)IORegistryEntryCreateCFProperty(obj, CFSTR("model"), kCFAllocatorDefault, 0);
-                    long length = CFDataGetLength(modelRef);
-                    CFDataGetBytes(modelRef, CFRangeMake(0, MIN(128, length)), (UInt8 *)model);
+                    CFDataGetBytes(modelRef, CFRangeMake(0, MIN(128, CFDataGetLength(modelRef))), (UInt8 *)model);
                     CFRelease(modelRef);
                     done = true;
                 }
@@ -166,5 +165,39 @@ void getDeviceUuid(mach_port_t mach_port, char *uuid) {
             IOObjectRelease(i);
         }
     }
-
 }
+
+void getProductName(mach_port_t mach_port, char *model) {
+    
+    kern_return_t   result;
+    
+    CFMutableDictionaryRef service_name = IOServiceNameMatching("product");
+    if (service_name) {
+        
+        io_iterator_t matchingServices;
+        result = IOServiceGetMatchingServices(mach_port, service_name, &matchingServices);
+        
+        if ((result == KERN_SUCCESS) && matchingServices) {
+            io_object_t obj;
+            bool done = false;
+            
+            do {
+                obj = IOIteratorNext(matchingServices);
+                
+                if (obj) {
+                    // This is not string data.  Why?  No idea.
+                    CFDataRef modelRef = (CFDataRef)IORegistryEntryCreateCFProperty(obj, CFSTR("product-name"), kCFAllocatorDefault, 0);
+                    CFDataGetBytes(modelRef, CFRangeMake(0, MIN(128, CFDataGetLength(modelRef))), (void *)model);
+                    CFRelease(modelRef);
+                    done = true;
+                }
+                
+                IOObjectRelease(obj);
+                
+            } while (obj && !done);
+            
+            IOObjectRelease(matchingServices);
+        }
+    }
+}
+

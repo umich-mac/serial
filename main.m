@@ -13,14 +13,15 @@ int main(int argc, char *argv[])
 	char			serial[40] = "";
 	char			model[128] = "";
     char            uuid[128]  = "";
+    char            product[128] = "";
 	
 	kernResult = IOMasterPort( MACH_PORT_NULL, &machPort );
 	
 	// if we got the master port
 	if ( kernResult == KERN_SUCCESS  ) {
-
 		getSerialNumber(machPort, serial);
 		getModelName(machPort, model);
+        getProductName(machPort, product);
 		getInterface(machPort, macAddress);
         getDeviceUuid(machPort, uuid);
 
@@ -74,10 +75,17 @@ int main(int argc, char *argv[])
             printf("%s\n", uuid);
             exit(0);
         }
-		
+
+        // Marketing name only
+        if (argc == 2 && strcasecmp(argv[1], "--product") == 0) {
+            printf("%s\n", product);
+            exit(0);
+        }
+        
         // Otherwise: all the numbers
 		printf("%s\n", serial);
 		printf("%s\n", model);
+        printf("%s\n", product);
 		printf("%02x:%02x:%02x:%02x:%02x:%02x\n", macAddress[0], macAddress[1], macAddress[2], macAddress[3], macAddress[4], macAddress[5]);
         printf("%s\n", uuid);
         printf("%d\n", shard);
